@@ -12,6 +12,7 @@ from datetime import datetime
 from PIL import Image, ImageDraw, ImageFont
 
 bot = commands.Bot(command_prefix=config.PREFIX, case_insensitive=True, intents=discord.Intents.all())
+bot.remove_command('help')
 
 def in_blacklist(ctx):
   return not str(ctx.message.author.id) in ['374955775656984576', '584565037256146945', '631025362863783946']
@@ -27,26 +28,42 @@ async def on_ready():
     print("Bot is online!")
     print("-----")
 
-
-# test commands -----------------------------------------------------------------------------------
+# basic commands -----------------------------------------------------------------------------------
 
 @bot.command()
 @commands.check(in_blacklist)
 async def ping(ctx):
     await ctx.send(f"I have a latency of {round(bot.latency * 1000, 1)}** ms")
 
+@bot.command()
+@commands.check(in_blacklist)
+async def help(ctx):
+    await ctx.send(f"Check the pin in the bots channel of the Mini Walls community server for help")
 
-# main commands -----------------------------------------------------------------------------------
+# stat commands -----------------------------------------------------------------------------------
 @bot.command()
 @commands.check(in_blacklist)
 async def s(ctx, username):
 
-    url = f"https://api.hypixel.net/player?key={config.APIKEY}&name={username}"
-    data = getInfo(url)
-
-    miwDataObject = get_miw_data(data)
-
-    rankReturn = calc_tag(data["player"])
+    try:
+        errorValue = 1
+        mojangUrl = f"https://api.mojang.com/users/profiles/minecraft/{username}"
+        dataMojang = getInfo(mojangUrl)
+        uuid = dataMojang["id"]
+        
+        errorValue = 2
+        hypixelUrl = f"https://api.hypixel.net/player?key={config.APIKEY}&uuid={uuid}"
+        dataHypixel = getInfo(hypixelUrl)
+        rankReturn = calc_tag(dataHypixel["player"])
+        miwDataObject = get_miw_data(dataHypixel)
+        
+    except:
+        match errorValue:
+            case 1:
+                await ctx.send(f"Mojang API Return: {dataMojang['errorMessage']}")
+            case 2:
+                #await ctx.send(f"Hypixel API Return: {dataHypixel}")
+                await ctx.send(f"")
     
     img = Image.new('RGB', (700, 350), color = '#181c30')
     font = ImageFont.truetype("arial.ttf", 25)
@@ -117,14 +134,32 @@ async def s(ctx, username):
 @commands.check(in_blacklist)
 async def advs(ctx, username):
 
-    hypixelUrl = f"https://api.hypixel.net/player?key={config.APIKEY}&name={username}"
-    dataHypixel = getInfo(hypixelUrl)
+    uuid = ""
 
-    rankReturn = calc_tag(dataHypixel["player"])
-    uuid = dataHypixel["player"]["uuid"]
+    try:
+        errorValue = 1
+        mojangUrl = f"https://api.mojang.com/users/profiles/minecraft/{username}"
+        dataMojang = getInfo(mojangUrl)
+        uuid = dataMojang["id"]
+        
+        errorValue = 2
+        hypixelUrl = f"https://api.hypixel.net/player?key={config.APIKEY}&uuid={uuid}"
+        dataHypixel = getInfo(hypixelUrl)
+        rankReturn = calc_tag(dataHypixel["player"])
 
-    azureUrl = f"https://miw-player-api.azurewebsites.net/api/miwPlayers/uuid/{uuid}"
-    dataAzure = getInfo(azureUrl)
+        errorValue = 3
+        azureUrl = f"https://miw-player-api.azurewebsites.net/api/miwPlayers/uuid/{uuid}"
+        dataAzure = getInfo(azureUrl)
+        
+    except:
+        match errorValue:
+            case 1:
+                await ctx.send(f"Mojang API Return: {dataMojang['errorMessage']}")
+            case 2:
+                #await ctx.send(f"Hypixel API Return: {dataHypixel}")
+                await ctx.send(f"")
+            case 3:
+                await ctx.send("Player requested is not in the top 250")
 
     
     img = Image.new('RGB', (900, 430), color = '#181c30')
@@ -289,6 +324,8 @@ async def lb(ctx, type, count):
             javascriptType = listOfLbsJavascript[counter]
         counter = counter + 1 
     
+    if sqlType == "":
+        await ctx.send("Invalid leaderboard type")
     
     url = f"https://miw-player-api.azurewebsites.net/api/miwPlayers/leaderboard/{sqlType}"
     data = getInfo(url)
@@ -306,6 +343,10 @@ async def lb(ctx, type, count):
 
     counter = 0
     lbString = ""
+
+    if int(count) > 25:
+        await ctx.send("Highest supported lb length is currently 25")
+
     while (int(count)) > counter:
         lbString = lbString + f"{counter + 1}: " f"{listOfPlayers[counter][0]} - " + f"{'{:,}'.format(listOfPlayers[counter][1])}  \n"
         #embed.add_field(name="", value=f"{counter + 1}: " f"{listOfPlayers[counter][0]} - " + f"{'{:,}'.format(listOfPlayers[counter][1])}", inline=False)
@@ -320,7 +361,6 @@ async def lb(ctx, type, count):
 
 
 bot.run(config.TOKEN)
-
 
 
 # py bot.py
