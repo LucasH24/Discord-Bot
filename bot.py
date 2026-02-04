@@ -45,22 +45,24 @@ async def help(ctx):
 @commands.check(in_blacklist)
 async def s(ctx, username):
 
-    mojangUrl = f"https://api.mojang.com/users/profiles/minecraft/{username}"
     try:
-        data = getInfo(mojangUrl)
-        uuid = data["id"]
+        errorValue = 1
+        mojangUrl = f"https://api.mojang.com/users/profiles/minecraft/{username}"
+        dataMojang = getInfo(mojangUrl)
+        uuid = dataMojang["id"]
+        
+        errorValue = 2
+        hypixelUrl = f"https://api.hypixel.net/player?key={config.APIKEY}&uuid={uuid}"
+        dataHypixel = getInfo(hypixelUrl)
+        rankReturn = calc_tag(dataHypixel["player"])
+        miwDataObject = get_miw_data(dataHypixel)
+        
     except:
-        await ctx.send(f"Mojang API Return: {data}")
-    
-
-
-    hypixelUrl = f"https://api.hypixel.net/player?key={config.APIKEY}&uuid={uuid}"
-    try:
-        data = getInfo(hypixelUrl)
-        rankReturn = calc_tag(data["player"])
-        miwDataObject = get_miw_data(data)
-    except:
-        await ctx.send(f"Hypixel API Return: {data}")
+        match errorValue:
+            case 1:
+                await ctx.send(f"Mojang API Return: {dataMojang['errorMessage']}")
+            case 2:
+                await ctx.send(f"Hypixel API Return: {dataHypixel}")
     
     img = Image.new('RGB', (700, 350), color = '#181c30')
     font = ImageFont.truetype("arial.ttf", 25)
@@ -134,24 +136,28 @@ async def advs(ctx, username):
     uuid = ""
 
     try:
+        errorValue = 1
         mojangUrl = f"https://api.mojang.com/users/profiles/minecraft/{username}"
-        data = getInfo(mojangUrl)
-        uuid = data["id"]
-    except:
-        await ctx.send(f"Mojang API Return: {data}")
-    
-    try:
+        dataMojang = getInfo(mojangUrl)
+        uuid = dataMojang["id"]
+        
+        errorValue = 2
         hypixelUrl = f"https://api.hypixel.net/player?key={config.APIKEY}&uuid={uuid}"
         dataHypixel = getInfo(hypixelUrl)
         rankReturn = calc_tag(dataHypixel["player"])
-    except:
-        await ctx.send(f"Hypixel API Return: {dataHypixel}")
 
-    try:
+        errorValue = 3
         azureUrl = f"https://miw-player-api.azurewebsites.net/api/miwPlayers/uuid/{uuid}"
         dataAzure = getInfo(azureUrl)
+        
     except:
-        await ctx.send("Player requested is not in the top 250")
+        match errorValue:
+            case 1:
+                await ctx.send(f"Mojang API Return: {dataMojang['errorMessage']}")
+            case 2:
+                await ctx.send(f"Hypixel API Return: {dataHypixel}")
+            case 3:
+                await ctx.send("Player requested is not in the top 250")
 
     
     img = Image.new('RGB', (900, 430), color = '#181c30')
