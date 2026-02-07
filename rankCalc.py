@@ -193,9 +193,5 @@ def replace_custom_colors(rank, p, r):
             if component[0] == "%r":
                 component[0] = r
 
-    if new_rank[1][0] == None:
-        new_rank[1][0] = 'fe3f3f'
 
     return new_rank
-
-
